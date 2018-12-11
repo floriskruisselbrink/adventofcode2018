@@ -5,10 +5,11 @@ object Day2 {
         .readText()
         .lines()
         .filter { it.isNotEmpty() }
+        .map { it.toCharArray() }
 
-    private fun xOfAnyLetter(boxid: String, letterCount: Int): Boolean {
+    private fun xOfAnyLetter(boxid: CharArray, letterCount: Int): Boolean {
         val letterMap = mutableMapOf<Char, Int>()
-        boxid.toCharArray().forEach {
+        boxid.forEach {
             val count = letterMap.getOrDefault(it, 0)
             letterMap[it] = count + 1
         }
@@ -16,11 +17,11 @@ object Day2 {
         return letterMap.filter { it.value == letterCount }.isNotEmpty()
     }
 
-    private fun twoOfAnyLetter(boxid: String): Boolean {
+    private fun twoOfAnyLetter(boxid: CharArray): Boolean {
         return xOfAnyLetter(boxid, 2)
     }
 
-    private fun threeOfAnyLetter(boxid: String): Boolean {
+    private fun threeOfAnyLetter(boxid: CharArray): Boolean {
         return xOfAnyLetter(boxid, 3)
     }
 
@@ -30,8 +31,33 @@ object Day2 {
 
         return two * three
     }
+
+    private fun findMatchingChars(first: CharArray, second: CharArray): List<Char> {
+        val matching = mutableListOf<Char>()
+
+        for (i in 0 until first.count()) {
+            if (first[i] == second[i]) {
+                matching.add(first[i])
+            }
+        }
+
+        return matching
+    }
+
+    fun answerPart2(): String {
+        for (i in 0 until input.size - 1) {
+            for (j in i + 1 until input.size) {
+                val matches = findMatchingChars(input[i], input[j])
+                if (matches.count() == input[i].count()-1) {
+                    return matches.joinToString("")
+                }
+            }
+        }
+        return "??"
+    }
 }
 
 fun main(args: Array<String>) {
     println("Day2 part1: " + Day2.answerPart1())
+    println("Day2 part2: " + Day2.answerPart2())
 }
