@@ -1,90 +1,114 @@
 package nl.vloris.adventofcode.advent2018
 
+import java.time.LocalDateTime
+
 data class Player(val label: String) {
-    var score = 0
+    var score = 0L
+}
+
+data class Marble(val value: Int) {
+    var left: Marble = this
+    var right: Marble = this
+
+    override fun toString(): String {
+        return value.toString()
+    }
+}
+
+class Circle {
+    private val firstMarble = Marble(0)
+    private var current = firstMarble
+
+    fun insertMarble(value: Int) {
+        val newMarble = Marble(value)
+        newMarble.left = current
+        newMarble.right = current.right
+        current.right.left = newMarble
+        current.right = newMarble
+
+        // lelijke hack om de eerste stap te fixen...
+        if (current.left == current) { current.left = newMarble }
+
+        current = newMarble
+    }
+
+    fun removeMarble(): Int {
+        counterClockwise()
+
+        val removed = current
+        val right = removed.right
+        val left = removed.left
+
+        left.right = right
+        right.left = left
+
+        current = right
+
+        return removed.value
+    }
+
+    fun clockwise() {
+        current = current.right
+    }
+
+    fun counterClockwise() {
+        current = current.left
+    }
+
+    override fun toString(): String {
+        val builder = StringBuilder()
+
+        var marble = firstMarble
+        do {
+            if (marble == current) {
+                builder.append("($marble)")
+            } else {
+                builder.append(" $marble ")
+            }
+            marble = marble.right
+        } while (marble != firstMarble)
+
+        return builder.toString()
+    }
 }
 
 class Game(private val players: List<Player>, private val lastMarble: Int) {
+    private val circle = Circle()
 
-    private val circle = arrayListOf(0)
-    private var currentPlayerIndex = 0
-    private var currentCirclePosition = 1
-    private var currentMarbleValue = 1
+    private fun nextTurn(marble: Int) {
+        val player = players[(marble-1) % players.size]
 
-    private val currentPlayer get() = players[currentPlayerIndex]
+        if (marble % 23 == 0) {
+            repeat(7) { circle.counterClockwise() }
 
-    private fun calculateNextPosition(offset: Int): Int {
-        val nextPosition = (currentCirclePosition + circle.size + offset) % circle.size
-        return if (nextPosition == 0) {
-            circle.size
+            player.score += marble
+            player.score += circle.removeMarble()
         } else {
-            nextPosition
-        }
-    }
-
-    private fun insertMarble(): Int {
-        circle.add(currentCirclePosition, currentMarbleValue)
-        return calculateNextPosition(+2)
-    }
-
-    private fun removeMarble(): Int {
-        // 1. add marble-value to score
-        currentPlayer.score += currentMarbleValue
-
-        // 2. add marble-value of 7 positions counter-clockwise to score
-        currentCirclePosition = calculateNextPosition(-9)
-        currentPlayer.score += circle[currentCirclePosition]
-        circle.removeAt(currentCirclePosition)
-
-        // 3. return position clockwise of removed marble
-        return calculateNextPosition(+2)
-    }
-
-    private fun nextTurn() {
-        val nextPosition = if (currentMarbleValue % 23 == 0) {
-            removeMarble()
-        } else {
-            insertMarble()
+            circle.insertMarble(marble)
         }
 
-        //printCircle()
+        //printCircle(player)
 
-        currentCirclePosition = if (nextPosition == 0) {
-            circle.size
-        } else {
-            nextPosition
-        }
-        currentMarbleValue++
-        currentPlayerIndex = (currentPlayerIndex + 1) % players.size
+        circle.clockwise()
     }
 
-    private fun printCircle() {
-        val sb = StringBuilder()
-        sb.append("[%3s] ".format(currentPlayer.label))
-
-        circle.forEachIndexed { index, marble ->
-            if (index == currentCirclePosition) {
-                sb.append("($marble)")
-            } else {
-                sb.append(" $marble ")
-            }
-        }
-        println(sb.toString())
+    private fun printCircle(player: Player) {
+        println("[%3s] %s".format(player.label, circle.toString()))
     }
 
     fun play() {
-        while (currentMarbleValue <= lastMarble) {
-            nextTurn()
+        for (marble in 1..lastMarble) {
+            nextTurn(marble)
         }
     }
 
-    fun winningScore(): Int {
+    fun winningScore(): Long {
         return players.map { it.score }.max() ?: 0
     }
 }
 
 object Day9 {
-    private fun calculateWinningScore(numPlayers: Int, lastMarble: Int): Int {
+    private fun calculateWinningScore(numPlayers: Int, lastMarble: Int): Long {
         val players = List(numPlayers) { i -> Player("${i + 1}") }
         val game = Game(players, lastMarble)
         game.play()
@@ -92,14 +116,19 @@ object Day9 {
         return game.winningScore()
     }
 
-    fun answerPart1(): Int {
-        //return calculateWinningScore(9, 25) // expected: 32
-        //return calculateWinningScore(10, 1618) // expected: 8317
-        //return calculateWinningScore(17, 1104) // expected: 2764
+    fun answerPart1(): Long {
         return calculateWinningScore(447, 71510)
+    }
+
+    fun answerPart2(): Long {
+        return calculateWinningScore(447, 71510 * 100)
     }
 }
 
 fun main(args: Array<String>) {
+    println(LocalDateTime.now())
     println("Day9, part1: " + Day9.answerPart1())
+    println(LocalDateTime.now())
+    println("Day9, part2: " + Day9.answerPart2())
+    println(LocalDateTime.now())
 }
