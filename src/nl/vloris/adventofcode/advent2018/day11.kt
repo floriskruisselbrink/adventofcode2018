@@ -1,7 +1,7 @@
 package nl.vloris.adventofcode.advent2018
 
 class Grid(private val size: Int) : Iterable<Int> {
-    private val grid = IntArray(size*size)
+    private val grid = IntArray(size * size)
 
     operator fun get(x: Int, y: Int): Int {
         return grid[index(x, y)]
@@ -12,7 +12,7 @@ class Grid(private val size: Int) : Iterable<Int> {
     }
 
     private fun index(x: Int, y: Int): Int {
-        return (y-1) * size + (x-1)
+        return (y - 1) * size + (x - 1)
     }
 
     override fun iterator(): Iterator<Int> = grid.iterator()
@@ -41,38 +41,57 @@ object Day11 {
         return fuelGrid
     }
 
-    private fun powerOf3x3(grid: Grid, left: Int, top: Int): Int {
+    private fun powerOfSquare(grid: Grid, left: Int, top: Int, size: Int): Int {
         var runningTotal = 0
-        for (x in left..left + 2) {
-            for (y in top..top + 2) {
+        for (x in left until left + size) {
+            for (y in top until top + size) {
                 runningTotal += grid[x, y]
             }
         }
         return runningTotal
     }
 
+    data class Answer(val left: Int, val top: Int, val size: Int, val power: Int)
+
     fun answerPart1(): String {
         val fuelGrid = createGrid(7139)
 
-        var maxX = -1
-        var maxY = -1
-        var maxPower = -1
+        var answer = Answer(-1, -1, -1, -1)
 
         for (left in 1..298) {
             for (top in 1..298) {
-                val power = powerOf3x3(fuelGrid, left, top)
-                if (power > maxPower) {
-                    maxPower = power
-                    maxX = left
-                    maxY = top
+                val power = powerOfSquare(fuelGrid, left, top, 3)
+                if (power > answer.power) {
+                    answer = Answer(left, top, 3, power)
                 }
             }
         }
 
-        return "$maxX,$maxY"
+        return "${answer.left},${answer.top}"
+    }
+
+
+    fun answerPart2(): String {
+        val fuelGrid = createGrid(7139)
+
+        var answer = Answer(-1, -1, -1, -1)
+
+        for (size in 1..300) {
+            for (left in 1..(300 - size)) {
+                for (top in 1..(300 - size)) {
+                    val power = powerOfSquare(fuelGrid, left, top, size)
+                    if (power > answer.power) {
+                        answer = Answer(left, top, size, power)
+                    }
+                }
+            }
+        }
+
+        return "${answer.left},${answer.top},${answer.size}"
     }
 }
 
 fun main(args: Array<String>) {
     println("Day11, part1: " + Day11.answerPart1())
+    println("Day11, part2: " + Day11.answerPart2())
 }
