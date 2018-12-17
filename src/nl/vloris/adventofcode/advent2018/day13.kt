@@ -49,7 +49,6 @@ object Day13 {
         }
     }
 
-
     data class Location(
         val x: Int,
         val y: Int
@@ -68,9 +67,13 @@ object Day13 {
         var location: Location,
         var direction: Direction
     ) {
+        var hasCrashed = false
         private var nextTurn = Turn.LEFT
 
+
         fun move(map: Map) {
+            check(!hasCrashed)
+
             updateLocation()
             updateDirection(map[location])
         }
@@ -106,42 +109,78 @@ object Day13 {
         }
     }
 
+    enum class GameMode {
+        STOP_ON_COLLISION,
+        REMOVE_COLLISIONS
+    }
+
     class Game(
         private val map: Map,
-        private val carts: List<Cart>
+        private val carts: MutableList<Cart>,
+        private val mode: GameMode
     ) {
+        private var turn = 0
+
         fun moveCarts(): Location? {
+            turn++
+
             val sortedCarts = carts
                 .sortedBy { it.location.y * 150 + it.location.x }
 
             for (cart in sortedCarts) {
-                cart.move(map)
-                val collision = detectCollision()
+                if (cart.hasCrashed) continue
 
-                if (collision != null) {
-                    return collision
+                cart.move(map)
+                val location = cart.location
+
+                if (detectCollision(location)) {
+                    when (mode) {
+                        GameMode.STOP_ON_COLLISION -> return location
+                        GameMode.REMOVE_COLLISIONS -> markCollisions(location)
+                    }
                 }
             }
 
+            removeCollisions()
             return null
         }
 
-        private fun detectCollision(): Location? {
+        fun onlyOneCartRemaining(): Boolean {
+            return carts.size == 1
+        }
+
+        fun remainingCart(): Location {
+            return carts.single().location
+        }
+
+        private fun markCollisions(location: Location) {
+            carts.filter { it.location == location }
+                .forEach { it.hasCrashed = true }
+        }
+
+        private fun removeCollisions() {
+            carts.removeAll { it.hasCrashed }
+        }
+
+        private fun detectCollision(location: Location): Boolean {
             return carts
-                .groupingBy { it.location }
-                .eachCount()
-                .filterValues { it > 1 }
-                .keys
-                .firstOrNull()
+                .filter { !it.hasCrashed && it.location == location }
+                .size > 1
         }
     }
 
-    private val input = javaClass.getResource("day13-input.txt")
-        .readText()
-        .lines()
-        .filter { it.isNotEmpty() }
-        .map { it.toCharArray() }
-        .toTypedArray()
+    private fun createGame(filename: String, gameMode: GameMode): Game {
+        val input = javaClass.getResource(filename)
+            .readText()
+            .lines()
+            .filter { it.isNotEmpty() }
+            .map { it.toCharArray() }
+            .toTypedArray()
+
+        val carts = extractCarts(input)
+        val map = Map(input)
+        return Game(map, carts.toMutableList(), gameMode)
+    }
 
     private fun extractCarts(map: Array<CharArray>): List<Cart> {
         val carts = mutableListOf<Cart>()
@@ -172,9 +211,7 @@ object Day13 {
     }
 
     fun answerPart1(): Location {
-        val carts = extractCarts(input)
-        val map = Map(input)
-        val game = Game(map, carts)
+        val game = createGame("day13-input.txt", GameMode.STOP_ON_COLLISION)
 
         var collision: Location?
         do {
@@ -183,8 +220,19 @@ object Day13 {
 
         return collision
     }
+
+    fun answerPart2(): Location {
+        val game = createGame("day13-input.txt", GameMode.REMOVE_COLLISIONS)
+
+        do {
+            game.moveCarts()
+        } while (!game.onlyOneCartRemaining())
+
+        return game.remainingCart()
+    }
 }
 
 fun main(args: Array<String>) {
     println("Day13, part1: " + Day13.answerPart1())
+    println("Day13, part2: " + Day13.answerPart2())
 }
